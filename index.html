@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Smart Incubator</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+</head>
+<body style="background: #F1F1F1">
+    <div class="container">
+        <center><h1 style="margin-bottom: 20px;">Smart Incubator</h1></center>
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3">
+                <div class="row">
+                    <div class="col-xs-6 panel-grids">
+                        <div class="panel panel-success"> <div class="panel-heading"> <h3 class="panel-title">Temperature</h3> </div> 
+                        <div class="panel-body"><h3 id="tempValue" style="display: inline; float: left;">--&#176C</h3> <img src="thermometer.png" alt="Smiley face" height="60" width="32" style="float:right"></div> </div>
+                    </div>
+
+                    <div class="col-xs-6 panel-grids">
+                        <div class="panel panel-info"> <div class="panel-heading"> <h3 class="panel-title">Humidity</h3> </div> <div class="panel-body"><h3 id="humValue" style="display: inline; float: left;">--%</h3> <img src="humidity.png" alt="Smiley face" height="60" width="32" style="float:right"></div> </div>
+                    </div>
+                </div>
+                <div class="clearfix"></div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3">
+                <div id="container1">
+
+                </div>
+            </div>
+            <div class="clearfix"></div>
+        </div><br>
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3">
+                <div class="panel panel-default"> <div class="panel-heading"> <h3 class="panel-title" id="updateP">Last update: 0000-00-00 00:00:00</h3> </div> </div>
+            </div>
+            <div class="clearfix"></div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3">
+                <div style="margin-left: 16px; margin-bottom: 16px;"><a href="index.html" class="btn btn-info btn-sm">Refresh</a></div>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script>
+    $(document).ready(function() {
+        var url = 'https://api.thingspeak.com/channels/924236/feeds.json?api_key=2ZAYK529A6UYQ7JA&results=10';
+        //Fetching JSON
+        $.getJSON(url, function(data) {
+            var lastUpdate = []; //Update time
+            var timeData = []; //Hour and Minute for X-axis
+            var tempData = [];  //Temperature data
+            var humData = [];   //Humidity data
+            var maxData = data.feeds.length; //Stores the total no of data(No of times Nodemcu updates the server)
+
+          for(var i = 0; i < maxData; i++){
+            lastUpdate[i] =  data.feeds[i].created_at;   //Get update time data
+            var lastUpdateTime = new Date(lastUpdate[i]); //Convert the time to DateTime format
+            var lastUpdateLocalTime = lastUpdateTime.toLocaleString(); //Change the time to local time of the viewer
+
+            timeData[i] = ('0' + lastUpdateTime.getHours().toLocaleString()).substr(-2) + ':' + ('0' + lastUpdateTime.getMinutes().toLocaleString()).substr(-2);
+            
+            tempData[i] = Number(data.feeds[i].field1); //Get the temperature data
+            humData[i] = Number(data.feeds[i].field2);  //Get the humidity data
+          }
+
+          //Get last update to be updated to UI
+          var theLastUpdate = lastUpdate[maxData-1];
+          var theLastUpdateTime = new Date(theLastUpdate);
+          var theLastUpdateLocalTime = theLastUpdateTime.toLocaleString();
+          theLastUpdateLocalTime = theLastUpdateLocalTime.replace(",", "");
+
+            //Updating the UI (Temp, humidity and last update)
+          document.getElementById("tempValue").innerHTML = tempData[maxData-1] + String.fromCharCode(176) + 'C';
+          document.getElementById("humValue").innerHTML = humData[maxData-1] + '%';
+          document.getElementById("updateP").innerHTML = 'Last update: ' + theLastUpdateLocalTime;
+
+          //Chart starts
+          Highcharts.chart('container1', {
+            chart: {
+                type: 'line'
+            },
+            title: {
+                text: 'Temperature and Humidity'
+            },
+            xAxis: {
+                categories: timeData,
+                title: {
+                    text: 'Time'
+                }
+            },
+            yAxis: {
+                title: {
+                    text: 'Temp (°C) or RH (%)'
+                }
+            },
+            plotOptions: {
+                line: {
+                    dataLabels: {
+                        enabled: true
+                    },
+                    enableMouseTracking: false
+                }
+            },
+            series: [{
+                name: 'Temperature',
+                data: tempData,
+                color: '#3C763D'
+            }, {
+                name: 'Humidity',
+                data: humData,
+                color: '#3BB2F4'
+            }]
+        });   //Chart ends
+
+        });
+    });
+    
+</script>
+</html>
